@@ -1,8 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
+  --background: #fafafa;
   --foreground: #171717;
+  --edge: #a1a1aa;
+  --chart-grid: #e4e4e7;
+  --chart-axis: #71717a;
+  --chart-before: #71717a;
+  --chart-after: #0284c7;
 }
 
 @theme inline {
@@ -14,13 +19,31 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #09090b;
     --foreground: #ededed;
+    --edge: #52525b;
+    --chart-grid: #27272a;
+    --chart-axis: #a1a1aa;
+    --chart-before: #a1a1aa;
+    --chart-after: #38bdf8;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* React Flow ships only structural CSS (base.css); edges are styled here. */
+.react-flow__edge-path {
+  stroke: var(--edge);
+  stroke-width: 1.5;
+}
+.react-flow__attribution {
+  background: transparent;
+  font-size: 9px;
+}
+.react-flow__attribution a {
+  color: var(--chart-axis);
 }

@@ -1,36 +1,28 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ARCHLAB
 
-## Getting Started
+Guided, interactive scenarios that show developers when a load balancer, cache, queue or replica is worth it, and when it is just extra complexity. See [ArchLab.md](ArchLab.md) for the product and [MODEL.md](MODEL.md) for the simulation model.
 
-First, run the development server:
+## Develop
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3000
+npm test           # Vitest: engine, scenarios, content, diagram layout
+npm run test:e2e   # Playwright smoke tests (builds and starts the app on port 3100)
+npm run lint
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Layout
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+src/
+  engine/       pure TypeScript queueing model, no React (ESLint-enforced)
+  scenarios/    scenario definitions as data, validated with Zod
+  content/      all user-facing explanation text, keyed by engine codes
+  components/   diagram, slider, metrics, fix options, comparison, verdict
+  store/        Zustand state for the scenario player
+  app/          routes: /, /scenarios/[slug]
+e2e/            one Playwright smoke test per scenario
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Adding a scenario means adding a file in `src/scenarios/` and registering it in `src/scenarios/index.ts`. The engine does not change.

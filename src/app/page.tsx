@@ -1,69 +1,52 @@
-import Image from "next/image";
+import Link from "next/link";
+import { SCENARIOS } from "@/scenarios";
+
+const COMING_SOON = [
+  { number: 2, title: "The Database Bottleneck", tagline: "The CPU is idle and responses are still slow. More servers will not help." },
+  { number: 3, title: "Make Them Wait, or Make It Async", tagline: "Slow work inline, or on a queue with background workers?" },
+  { number: 4, title: "Do You Even Need That?", tagline: "Remove components from an over-built setup without breaking it." },
+];
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <main className="mx-auto w-full max-w-4xl px-4 py-16 sm:px-6">
+      <p className="text-sm font-semibold tracking-widest text-sky-700 dark:text-sky-400">ARCHLAB</p>
+      <h1 className="mt-3 text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+        Find out what your app actually needs, before you add it.
+      </h1>
+      <p className="mt-4 max-w-2xl text-lg leading-8 text-zinc-600 dark:text-zinc-400">
+        Guided scenarios that show when a load balancer, cache, queue or replica is worth it, and when it is just extra complexity.
+        Start with one server, raise the load, try a fix, and get a straight answer.
+      </p>
+
+      <h2 className="mt-12 text-sm font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Scenarios</h2>
+      <ul className="mt-3 space-y-3">
+        {SCENARIOS.map((s) => (
+          <li key={s.slug}>
+            <Link
+              href={`/scenarios/${s.slug}`}
+              className="block rounded-xl border border-zinc-200 bg-white p-5 transition-colors hover:border-sky-600 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-sky-500"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+              <span className="text-sm text-zinc-500 dark:text-zinc-400">Scenario {s.number}</span>
+              <span className="mt-1 block text-lg font-semibold text-zinc-900 dark:text-zinc-100">{s.title}</span>
+              <span className="mt-1 block text-zinc-600 dark:text-zinc-400">{s.tagline}</span>
+              <span className="mt-3 block text-sm font-medium text-sky-700 dark:text-sky-400">Start →</span>
+            </Link>
+          </li>
+        ))}
+        {COMING_SOON.map((s) => (
+          <li key={s.number} className="rounded-xl border border-dashed border-zinc-300 p-5 dark:border-zinc-700">
+            <span className="text-sm text-zinc-500 dark:text-zinc-400">Scenario {s.number} · coming soon</span>
+            <span className="mt-1 block text-lg font-semibold text-zinc-500 dark:text-zinc-400">{s.title}</span>
+            <span className="mt-1 block text-zinc-500 dark:text-zinc-500">{s.tagline}</span>
+          </li>
+        ))}
+      </ul>
+
+      <p className="mt-12 text-sm text-zinc-500 dark:text-zinc-400">
+        Numbers come from a queueing model with stated assumptions. ARCHLAB teaches direction and order of magnitude, not capacity
+        planning.
+      </p>
+    </main>
   );
 }

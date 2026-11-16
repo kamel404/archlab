@@ -236,7 +236,7 @@ Rules are evaluated in order, and the first match wins. The two async codes come
 | `APPROACHING_LIMIT` | SLO met and some station U ≥ 0.70 | that station, saturation point |
 | `HEALTHY` | otherwise | headroom ratio = saturation point / current load |
 
-Example (Scenario 2 at 45 rps): `DB_BOUND`, DB U = 0.83, DB share = 92%, CPU U = 0.23. Text: "Your app CPU is 77% idle. Requests spend 92% of their time waiting on the database."
+Example (Scenario 2 at 45 rps): `DB_BOUND`, DB U = 0.83, DB share = 92%, CPU U = 0.23. Text: "Your app CPU is 78% idle. Requests spend 92% of their time waiting on the database." (77.5% idle, rounded.)
 
 ---
 
