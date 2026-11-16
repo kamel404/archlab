@@ -32,10 +32,12 @@ Arrivals when the station already holds `K` requests are **rejected**. This is w
 ### 2.1 Choosing K from a timeout
 
 ```
-K = c + clamp(floor(T · c / S), 1, 2000)
+K = c + clamp(T · c / S, 1, 2000)
 ```
 
 `T` is the queue timeout, default **1 s**. A request that joins a queue of `q` requests waits about `q / (c·μ)`, so this K rejects roughly the requests that would wait longer than `T`. The 2000 cap keeps very fast stations (cache, load balancer) cheap to compute; it has no visible effect because their queues never fill in any scenario.
+
+**K is not floored.** A fractional K is solved at `floor(K)` and `floor(K) + 1`, and every output is interpolated linearly between the two. This matters for the worker pool, whose K depends on its hold time `H`. With an integer K, mean latency jittered up and down by about 0.5% in deep overload, and the "latency never decreases as load rises" property failed. With a constant K the jitter disappeared, which confirmed the cause.
 
 ### 2.2 State probabilities
 
@@ -81,7 +83,11 @@ F(t) = Σ_{n<c} π_n · (1 − e^{−μt})
 
 > **Do not** use the closed form `G_k^θ(t) − e^{−μt}(θ/(θ−μ))^k · G_k^{θ−μ}(t)`. It subtracts two huge numbers. For M/M/2 at ρ = 0.75 it returned 91.6 ms and 125.9 ms on two runs, against an exact 64.8 ms.
 
-P95 is computed **once, after the solve in §4 converges**, never inside the solve loop.
+P95 is computed **once, after the solve in §4 converges**, never inside the solve loop. The CDF tables are built lazily for the same reason.
+
+Two implementation details keep this fast without changing the result:
+- Queue lengths with weight below 1e−15 are skipped, so the Erlang tables only go as far as queue lengths that matter.
+- The inner geometric sum uses the recursion `S_k = q·G(k+1) + (1−q)·S_{k+1}`, which is O(K + J) instead of O(K·J).
 
 ---
 
@@ -168,9 +174,11 @@ A consequence that is correct, not a bug: under overload, CPU utilization tops o
 | Mean latency | `R_lb + Wq_worker + H` | calculated |
 | P95 latency | `P95_lb + P95_wait,worker + P95_cpu + P95_db + P95_cache` | **estimate** (upper bound) |
 | Utilization per station | §2.3 | calculated |
+| Demand per station | offered load if nothing upstream rejected requests (can exceed 1) | calculated |
 | Saturation point | lowest load where the SLO fails (§9.2) | calculated |
 | Monthly cost | §8 | **estimate** |
 
+- CPU, database and cache only see traffic the worker pool admits, so their own `ρ` is capped. Their reported **demand** is scaled back up by `(λ/N) / x`. Otherwise an overloaded server would show CPU demand 0.95 instead of 1.725, hiding the "you are asking for 170% of a CPU" signal.
 - `f_db = r·(1−h) + (1−r)` and `f_cache = r` are the fractions of requests that touch each station. `Pb_db` is the worse of primary and replica. `P95_db` is the worse of primary and replica.
 - Error composition and mean latency assume stations are independent. Under the "calculated" label, the tooltip says "calculated from the model".
 - End-to-end P95 sums per-station P95s. Real P95 is lower, because the slowest moments at different stations rarely coincide. That's why it's labelled as an upper-bound estimate.
@@ -215,16 +223,16 @@ Outputs: backlog over time, peak backlog, peak job delay, time until the backlog
 
 Status colours: green `U < 0.70`, amber `0.70 ≤ U < 0.85`, red `U ≥ 0.85` or `P_block ≥ 1%`.
 
-Rules are evaluated in order, and the first match wins:
+Rules are evaluated in order, and the first match wins. The two async codes come first: an inline-overloaded server also has an exhausted worker pool, and "your slow work is eating the CPU" is the more useful thing to say.
 
 | Code | Condition | Payload |
 |---|---|---|
+| `JOB_BACKLOG_GROWING` | queued mode and `λ_jobs > C` | growth rate |
+| `INLINE_SLOW_WORK` | SLO missed, inline mode, and slow jobs are > 50% of CPU time | job share |
 | `WORKER_POOL_EXHAUSTED` | worker U ≥ 0.95 | the station with the largest share of H (the cause) |
 | `CPU_BOUND` | SLO missed and CPU has the largest share | CPU U, share |
 | `DB_BOUND` | SLO missed and DB has the largest share | DB U, share, CPU U (to show "CPU idle") |
 | `CACHE_BOUND` | SLO missed and cache has the largest share | cache U |
-| `INLINE_SLOW_WORK` | inline mode and slow jobs are > 50% of CPU time | job share |
-| `JOB_BACKLOG_GROWING` | queued mode and `λ_jobs > C` at any step | growth rate, time to threshold |
 | `APPROACHING_LIMIT` | SLO met and some station U ≥ 0.70 | that station, saturation point |
 | `HEALTHY` | otherwise | headroom ratio = saturation point / current load |
 
@@ -275,7 +283,7 @@ Rules are evaluated in order:
 | `CHEAPER_FIX_EXISTS` | It meets the SLO, but another option ranks higher. Payload: that option. |
 
 ### 9.2 Saturation point
-The lowest load where the architecture misses the SLO. Found by bisection on load over `[1, scenario max]` to 1 rps precision. Missing the SLO is assumed to be monotone in load, and a test checks that (§13.4). Computed when the slider stops moving, not on every frame.
+The lowest whole-number load (rps) where the architecture misses the SLO. Found by integer bisection over `[1, scenario max]`; `null` when the SLO still holds at the scenario max. Missing the SLO is assumed to be monotone in load, and a test checks that (§13.4). Computed when the slider stops moving, not on every frame.
 
 ---
 
@@ -326,6 +334,10 @@ ARCHLAB teaches direction and order of magnitude, not capacity planning.
 ---
 
 ## 13. Test plan
+
+Implemented in `src/engine/__tests__/` (`npm test`).
+
+The oracle floors K, while the engine interpolates (§2.1). The resulting differences are well inside the 1% network tolerance.
 
 Station values are exact for the model: assert with relative tolerance **1e−3**. Architecture values depend on bisection: assert with relative tolerance **1%**. Saturation points: assert to **±1 rps**.
 
@@ -398,4 +410,4 @@ Scenario 1 defaults with `S_read = 40 ms`. Load 45 rps.
 
 ### 13.7 Performance budget
 
-One architecture solve (§4 + P95) must take **< 16 ms**, which is one frame. The oracle takes 7–14 ms in Node with the K cap; the cache case took 23 ms without it. A saturation-point search (§9.2) runs when the slider stops moving, so it has a budget of < 300 ms.
+One architecture solve (§4 + P95) must take **< 16 ms**, which is one frame. The engine measures 1.4–5.4 ms in Node, worst case in overload. Before the lazy CDFs and the recursion in §2.4 it took up to 17 ms. A saturation-point search (§9.2) runs when the slider stops moving, so it has a budget of < 300 ms. The test is skipped when `CI` is set, because shared CI machines make timings unreliable.
